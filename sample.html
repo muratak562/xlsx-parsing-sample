@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>sheet.js demo</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
+        crossorigin="anonymous">
+    <style>
+        /* ファイル選択 */
+
+        /* http://cccabinet.jpn.org/bootstrap4/javascript/forms/file-browser */
+
+        .custom-file-input:lang(ja)~.custom-file-label::after {
+            content: "参照";
+        }
+
+        .custom-file {
+            overflow: hidden;
+        }
+
+        .custom-file-label {
+            white-space: nowrap;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container-fluid">
+        <h2>sheet-js demo</h2>
+        <div>
+        <p>.xlsx 拡張子のファイルを選択もしくはドラッグ&ドロップしてください。結果はJSONとして返却されます。</p>
+        </div>
+        <div class="custom-file">
+            <input type="file" class="custom-file-input" id="customFile">
+            <label class="custom-file-label" for="customFile">Excelファイルを選択...</label>
+        </div>
+        <div>
+            <h4>Result</h4>
+            <pre id="result">OutPut JSON =  </pre>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+    crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.8/xlsx.full.min.js"></script>
+    <script>
+
+        function generateTable(rowLength, colLength, outputSheet1) {
+            // console.log(outputSheet1);
+            // console.log(Object.keys(outputSheet1[0]));
+            // console.log(sampleArray[0]);
+            // console.log(outputSheet1[0][sampleArray[0]]);
+            // console.log(sampleArray);
+
+            const sampleArray = Object.keys(outputSheet1[0]);
+            const body = document.getElementsByTagName("body")[0];
+            const tbl = document.createElement("table");
+            const tblBody = document.createElement("tbody");
+            const wantedArray = [{
+                index: "index", 
+                A: "A", 
+                B: "B", 
+                C: "C", 
+                D: "D"
+            } , ...outputSheet1]
+
+            for( let i = 0; i< rowLength+1; i++) {
+                let row = document.createElement("tr");
+                let rowObject =  wantedArray[i];
+                let objKeys = Object.keys(wantedArray[i]);
+                console.log(outputSheet1[i]);
+                for(let j = 0; j<colLength;j++) {
+                    let cell = document.createElement("td");
+                    let cellText = document.createTextNode(rowObject[objKeys[j]]);
+                    cell.appendChild(cellText);
+                    row.appendChild(cell);
+                }
+            tblBody.appendChild(row);
+            }
+        tbl.appendChild(tblBody);
+        body.appendChild(tbl);
+        tbl.setAttribute("border", "1");
+        }
+
+
+        function functionInsideReaderOnload (e) {
+                let data = e.target.result;
+                let wb;
+                let arr = fixdata(data);
+                wb = XLSX.read(btoa(arr), {
+                    type: 'base64',
+                    cellDates: true,
+                });
+                let output = "";
+                console.log("wb:", wb);
+                console.log("arr:", arr);
+                output = to_json(wb);
+                console.log("output:", output);
+                const pre = document.getElementById("result");
+                pre.insertAdjacentHTML("beforeend", (JSON.stringify(output, null, 2)));
+                const rowLength = Object.keys(output.Sheet1[0]).length;
+                const colLength = output.Sheet1.length;
+                const outputSheet1 = output.Sheet1;
+                generateTable(rowLength, colLength, outputSheet1);
+                // console.log("Column length:", output.Sheet1.length);
+                // console.log("Row length:", Object.keys(output.Sheet1[0]).length);
+        };
+
+        
+        
+        // ファイル選択時のメイン処理
+        function handleDrop(e) {
+            e.stopPropagation();
+            e.preventDefault();
+            reader.onload = (e) => {
+                functionInsideReaderOnload(e);
+            };
+            reader.readAsArrayBuffer(f);
+        }
+
+        function handleFile(e) {
+
+            let files = e.target.files;
+            let f = files[0];
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+               functionInsideReaderOnload(e);
+            };  
+           reader.readAsArrayBuffer(f);
+        }
+
+        // ファイルの読み込み
+        function fixdata(data) {
+            let o = "",
+                l = 0,
+                w = 10240;
+            for (; l < data.byteLength / w; ++l) o += String.fromCharCode.apply(null, new Uint8Array(data.slice(l * w,
+                l * w + w)));
+            o += String.fromCharCode.apply(null, new Uint8Array(data.slice(l * w)));
+            return o;
+        }
+
+        // ワークブックのデータをjsonに変換
+        function to_json(workbook) {
+            let result = {};
+            workbook.SheetNames.forEach(function (sheetName) {
+                let roa = XLSX.utils.sheet_to_json(
+                    workbook.Sheets[sheetName],
+                    {
+                        raw: true,
+                    });
+                if (roa.length > 0) {
+                    result[sheetName] = roa;
+                }
+            });
+            return result;
+        }
+
+        // 画面初期化
+        window.onload = () => {
+            const elem = document.getElementsByClassName("custom-file-input")[0];
+            elem.addEventListener("change", (e) => {
+                handleFile(e);
+            })
+        }
+
+    </script>
+</body>
+
+</html>
