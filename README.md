@@ -1,0 +1,1 @@
+Inspect sample.html file to know how it parses xlsx data into JSON.
